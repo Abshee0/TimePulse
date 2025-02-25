@@ -121,11 +121,38 @@ export default function AttendanceUploadPage() {
             remarks: '',
           };
 
-          try {
+          // Check if we already have this date for this employee
+          const existingRecordIndex = processedData[employee.id].records.findIndex(
+            r => r.date === record.date
+          );
+
+          if (existingRecordIndex === -1) {
+            processedData[employee.id].records.push(record);
+          } else {
+            // Update existing record
+            processedData[employee.id].records[existingRecordIndex] = record;
+          }
+        }
+      }
+
+      if (Object.keys(processedData).length === 0) {
+        alert('No matching employees found in the uploaded file. Please check the Staff IDs and Names.');
+        return;
+      }
+
+      // Sort records by date for each employee
+      Object.values(processedData).forEach(({ records }) => {
+        records.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      });
+
+      try {
+        // Update database records
+        for (const employeeData of Object.values(processedData)) {
+          for (const record of employeeData.records) {
             const { error } = await supabase
               .from('attendance_records')
               .upsert({
-                employee_id: employee.id,
+                employee_id: employeeData.employee.id,
                 date: record.date,
                 duty_time: record.dutyTime,
                 in_time1: record.inTime1,
@@ -140,26 +167,26 @@ export default function AttendanceUploadPage() {
               });
 
             if (error) throw error;
-            processedData[employee.id].records.push(record);
-          } catch (error) {
-            console.error('Error uploading attendance record:', error);
           }
         }
-      }
 
-      if (Object.keys(processedData).length === 0) {
-        alert('No matching employees found in the uploaded file. Please check the Staff IDs and Names.');
-        return;
-      }
+        setUploadedEmployees(Object.values(processedData));
+        
+        // Update attendance state
+        const newAttendance: { [key: string]: AttendanceRecord[] } = {};
+        Object.values(processedData).forEach(({ employee, records }) => {
+          newAttendance[employee.id] = records;
+        });
+        setAttendance(newAttendance);
 
-      setUploadedEmployees(Object.values(processedData));
-      
-      // Update attendance state
-      const newAttendance: { [key: string]: AttendanceRecord[] } = {};
-      Object.values(processedData).forEach(({ employee, records }) => {
-        newAttendance[employee.id] = records;
-      });
-      setAttendance(newAttendance);
+        // Clear the file input
+        if (e.target) {
+          e.target.value = '';
+        }
+      } catch (error) {
+        console.error('Error uploading attendance records:', error);
+        alert('Error uploading attendance records. Please try again.');
+      }
     };
     reader.readAsBinaryString(file);
   };

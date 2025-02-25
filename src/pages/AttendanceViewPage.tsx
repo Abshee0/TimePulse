@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BarChart } from 'lucide-react';
 import { Employee, AttendanceRecord } from '../types';
 import { supabase } from '../lib/supabase';
-import AttendanceView from '../components/AttendanceView'; // Assuming AttendanceView is in the same directory
+import AttendanceView from '../components/AttendanceView';
 
 export default function AttendanceViewPage() {
   const [isLoading, setIsLoading] = useState(true);
@@ -49,7 +49,21 @@ export default function AttendanceViewPage() {
 
       if (error) throw error;
 
-      setAttendanceRecords(data || []);
+      const mappedRecords: AttendanceRecord[] = (data || []).map(record => ({
+        date: record.date,
+        dutyTime: record.duty_time || '',
+        inTime1: record.in_time1 || '',
+        outTime1: record.out_time1 || '',
+        inTime2: record.in_time2 || '',
+        outTime2: record.out_time2 || '',
+        inTime3: record.in_time3 || '',
+        outTime3: record.out_time3 || '',
+        medical: record.medical || false,
+        absent: record.absent || false,
+        remarks: record.remarks || ''
+      }));
+
+      setAttendanceRecords(mappedRecords);
     } catch (error) {
       console.error('Error fetching attendance:', error);
       alert('Error fetching attendance. Please try again.');
@@ -58,18 +72,32 @@ export default function AttendanceViewPage() {
 
   const handleEmployeeClick = (employee: Employee) => {
     setSelectedEmployee(employee);
-    fetchAttendance(employee.id); // Fetch attendance when an employee is selected
+    fetchAttendance(employee.id);
   };
 
-  const handleAttendanceUpdate = (updatedRecords: AttendanceRecord[]) => {
-    setAttendanceRecords(updatedRecords); // Update the state with the new records
+  const handleAttendanceUpdate = async (updatedRecords: AttendanceRecord[]) => {
+    if (!selectedEmployee) return;
 
-    // Optionally, you can save the updated attendance data to Supabase here
-    updatedRecords.forEach(async (record) => {
-      const { error } = await supabase
+    try {
+      // Get all existing records for this employee to track their IDs
+      const { data: existingRecords, error: fetchError } = await supabase
         .from('attendance_records')
-        .upsert({
-          employee_id: selectedEmployee?.id,
+        .select('*')
+        .eq('employee_id', selectedEmployee.id);
+
+      if (fetchError) throw fetchError;
+
+      // Create a map of existing records by date for easy lookup
+      const existingRecordMap = new Map(
+        existingRecords.map(record => [record.date, record])
+      );
+
+      // Process each updated record
+      for (const record of updatedRecords) {
+        const existingRecord = existingRecordMap.get(record.date);
+        
+        const recordData = {
+          employee_id: selectedEmployee.id,
           date: record.date,
           duty_time: record.dutyTime,
           in_time1: record.inTime1,
@@ -80,13 +108,46 @@ export default function AttendanceViewPage() {
           out_time3: record.outTime3,
           medical: record.medical,
           absent: record.absent,
-          remarks: record.remarks,
-        });
+          remarks: record.remarks
+        };
 
-      if (error) {
-        console.error('Error updating attendance record:', error);
+        if (existingRecord) {
+          // Update existing record
+          const { error } = await supabase
+            .from('attendance_records')
+            .update(recordData)
+            .eq('id', existingRecord.id);
+
+          if (error) throw error;
+        } else {
+          // This is a new record (from "Add Date" button)
+          const { error } = await supabase
+            .from('attendance_records')
+            .insert([recordData]);
+
+          if (error) throw error;
+        }
       }
-    });
+
+      // Delete any records that were removed (if any)
+      const updatedDates = new Set(updatedRecords.map(r => r.date));
+      const recordsToDelete = existingRecords.filter(r => !updatedDates.has(r.date));
+
+      if (recordsToDelete.length > 0) {
+        const { error } = await supabase
+          .from('attendance_records')
+          .delete()
+          .in('id', recordsToDelete.map(r => r.id));
+
+        if (error) throw error;
+      }
+
+      // Refresh the attendance records
+      await fetchAttendance(selectedEmployee.id);
+    } catch (error) {
+      console.error('Error updating attendance records:', error);
+      alert('Error updating attendance records. Please try again.');
+    }
   };
 
   if (isLoading) {
@@ -137,8 +198,7 @@ export default function AttendanceViewPage() {
         </div>
       </div>
 
-      {/* Display AttendanceView below the table when an employee is selected */}
-      {selectedEmployee && attendanceRecords.length > 0 && (
+      {selectedEmployee && (
         <AttendanceView
           employee={selectedEmployee}
           attendance={attendanceRecords}

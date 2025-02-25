@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { format, parseISO } from 'date-fns';
+import { Trash2 } from 'lucide-react';
 import { Employee, AttendanceRecord } from '../types';
 
 interface AttendanceViewProps {
@@ -12,14 +13,71 @@ export default function AttendanceView({ employee, attendance, onUpdate }: Atten
   const [isEditing, setIsEditing] = useState(false);
   const [editedRecords, setEditedRecords] = useState<AttendanceRecord[]>(attendance);
 
+  useEffect(() => {
+    setEditedRecords([...attendance].sort((a, b) => 
+      new Date(a.date).getTime() - new Date(b.date).getTime()
+    ));
+  }, [attendance]);
+
   const handleEdit = (index: number, field: keyof AttendanceRecord, value: any) => {
     const newRecords = [...editedRecords];
-    newRecords[index] = { ...newRecords[index], [field]: value };
+    
+    // Special handling for date changes
+    if (field === 'date') {
+      const oldRecord = newRecords[index];
+      const newDate = value;
+      
+      // Check if the new date already exists in other records
+      if (newRecords.some((r, i) => i !== index && r.date === newDate)) {
+        alert('A record for this date already exists. Please choose a different date.');
+        return;
+      }
+
+      // Update the date while preserving all other fields
+      newRecords[index] = {
+        ...oldRecord,
+        date: newDate
+      };
+    } else {
+      // For all other fields, update normally
+      newRecords[index] = { ...newRecords[index], [field]: value };
+    }
+
     setEditedRecords(newRecords);
   };
 
-  const handleSave = () => {
-    onUpdate(editedRecords);
+  const handleDelete = (index: number) => {
+    if (window.confirm('Are you sure you want to delete this record?')) {
+      const newRecords = [...editedRecords];
+      newRecords.splice(index, 1);
+      setEditedRecords(newRecords);
+      onUpdate(newRecords);
+    }
+  };
+
+  const handleSave = async () => {
+    // Sort records by date before saving
+    const sortedRecords = [...editedRecords].sort((a, b) => 
+      new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+
+    // Check for duplicate dates
+    const uniqueDates = new Set();
+    const duplicateDates: string[] = [];
+
+    sortedRecords.forEach(record => {
+      if (uniqueDates.has(record.date)) {
+        duplicateDates.push(record.date);
+      }
+      uniqueDates.add(record.date);
+    });
+
+    if (duplicateDates.length > 0) {
+      alert(`Duplicate dates found: ${duplicateDates.join(', ')}. Please ensure each date appears only once.`);
+      return;
+    }
+
+    await onUpdate(sortedRecords);
     setIsEditing(false);
   };
 
@@ -37,12 +95,20 @@ export default function AttendanceView({ employee, attendance, onUpdate }: Atten
       absent: false,
       remarks: '',
     };
-    setEditedRecords([...editedRecords, newRecord].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()));
+
+    // Check if date already exists
+    if (editedRecords.some(record => record.date === newRecord.date)) {
+      alert('A record for this date already exists. Please choose a different date.');
+      return;
+    }
+
+    setEditedRecords([...editedRecords, newRecord].sort((a, b) => 
+      new Date(a.date).getTime() - new Date(b.date).getTime()
+    ));
   };
 
   const formatTime = (time: string) => {
     if (!time) return '';
-    // If time is in decimal format (e.g., 9.5), convert it to HH:mm
     if (!isNaN(Number(time))) {
       const hours = Math.floor(Number(time));
       const minutes = Math.round((Number(time) - hours) * 60);
@@ -89,7 +155,7 @@ export default function AttendanceView({ employee, attendance, onUpdate }: Atten
                 </button>
                 <button
                   onClick={() => {
-                    setEditedRecords(attendance);
+                    setEditedRecords([...attendance]);
                     setIsEditing(false);
                   }}
                   className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
@@ -129,6 +195,7 @@ export default function AttendanceView({ employee, attendance, onUpdate }: Atten
                 <th className="px-4 py-2">Medical</th>
                 <th className="px-4 py-2">Absent</th>
                 <th className="px-4 py-2">Remarks</th>
+                <th className="px-4 py-2">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -158,12 +225,78 @@ export default function AttendanceView({ employee, attendance, onUpdate }: Atten
                       record.dutyTime
                     )}
                   </td>
-                  <td className="px-4 py-2">{formatTime(record.inTime1)}</td>
-                  <td className="px-4 py-2">{formatTime(record.outTime1)}</td>
-                  <td className="px-4 py-2">{formatTime(record.inTime2)}</td>
-                  <td className="px-4 py-2">{formatTime(record.outTime2)}</td>
-                  <td className="px-4 py-2">{formatTime(record.inTime3)}</td>
-                  <td className="px-4 py-2">{formatTime(record.outTime3)}</td>
+                  <td className="px-4 py-2">
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={record.inTime1}
+                        onChange={(e) => handleEdit(index, 'inTime1', e.target.value)}
+                        className="w-full border rounded px-2 py-1"
+                      />
+                    ) : (
+                      formatTime(record.inTime1)
+                    )}
+                  </td>
+                  <td className="px-4 py-2">
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={record.outTime1}
+                        onChange={(e) => handleEdit(index, 'outTime1', e.target.value)}
+                        className="w-full border rounded px-2 py-1"
+                      />
+                    ) : (
+                      formatTime(record.outTime1)
+                    )}
+                  </td>
+                  <td className="px-4 py-2">
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={record.inTime2}
+                        onChange={(e) => handleEdit(index, 'inTime2', e.target.value)}
+                        className="w-full border rounded px-2 py-1"
+                      />
+                    ) : (
+                      formatTime(record.inTime2)
+                    )}
+                  </td>
+                  <td className="px-4 py-2">
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={record.outTime2}
+                        onChange={(e) => handleEdit(index, 'outTime2', e.target.value)}
+                        className="w-full border rounded px-2 py-1"
+                      />
+                    ) : (
+                      formatTime(record.outTime2)
+                    )}
+                  </td>
+                  <td className="px-4 py-2">
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={record.inTime3}
+                        onChange={(e) => handleEdit(index, 'inTime3', e.target.value)}
+                        className="w-full border rounded px-2 py-1"
+                      />
+                    ) : (
+                      formatTime(record.inTime3)
+                    )}
+                  </td>
+                  <td className="px-4 py-2">
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={record.outTime3}
+                        onChange={(e) => handleEdit(index, 'outTime3', e.target.value)}
+                        className="w-full border rounded px-2 py-1"
+                      />
+                    ) : (
+                      formatTime(record.outTime3)
+                    )}
+                  </td>
                   <td className="px-4 py-2">
                     {isEditing ? (
                       <input
@@ -199,6 +332,15 @@ export default function AttendanceView({ employee, attendance, onUpdate }: Atten
                     ) : (
                       record.remarks
                     )}
+                  </td>
+                  <td className="px-4 py-2">
+                    <button
+                      onClick={() => handleDelete(index)}
+                      className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-100"
+                      title="Delete record"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </td>
                 </tr>
               ))}
