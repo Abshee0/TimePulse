@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { format, parseISO } from 'date-fns';
-import { Trash2 } from 'lucide-react';
 import { Employee, AttendanceRecord } from '../types';
 
 interface AttendanceViewProps {
@@ -12,7 +11,9 @@ interface AttendanceViewProps {
 export default function AttendanceView({ employee, attendance, onUpdate }: AttendanceViewProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedRecords, setEditedRecords] = useState<AttendanceRecord[]>(attendance);
+  const [isSaving, setIsSaving] = useState(false);
 
+  // Update editedRecords when attendance prop changes
   useEffect(() => {
     setEditedRecords([...attendance].sort((a, b) => 
       new Date(a.date).getTime() - new Date(b.date).getTime()
@@ -21,41 +22,13 @@ export default function AttendanceView({ employee, attendance, onUpdate }: Atten
 
   const handleEdit = (index: number, field: keyof AttendanceRecord, value: any) => {
     const newRecords = [...editedRecords];
-    
-    // Special handling for date changes
-    if (field === 'date') {
-      const oldRecord = newRecords[index];
-      const newDate = value;
-      
-      // Check if the new date already exists in other records
-      if (newRecords.some((r, i) => i !== index && r.date === newDate)) {
-        alert('A record for this date already exists. Please choose a different date.');
-        return;
-      }
-
-      // Update the date while preserving all other fields
-      newRecords[index] = {
-        ...oldRecord,
-        date: newDate
-      };
-    } else {
-      // For all other fields, update normally
-      newRecords[index] = { ...newRecords[index], [field]: value };
-    }
-
+    newRecords[index] = { ...newRecords[index], [field]: value };
     setEditedRecords(newRecords);
   };
 
-  const handleDelete = (index: number) => {
-    if (window.confirm('Are you sure you want to delete this record?')) {
-      const newRecords = [...editedRecords];
-      newRecords.splice(index, 1);
-      setEditedRecords(newRecords);
-      onUpdate(newRecords);
-    }
-  };
-
   const handleSave = async () => {
+    if (isSaving) return;
+
     // Sort records by date before saving
     const sortedRecords = [...editedRecords].sort((a, b) => 
       new Date(a.date).getTime() - new Date(b.date).getTime()
@@ -77,11 +50,21 @@ export default function AttendanceView({ employee, attendance, onUpdate }: Atten
       return;
     }
 
-    await onUpdate(sortedRecords);
-    setIsEditing(false);
+    try {
+      setIsSaving(true);
+      await onUpdate(sortedRecords);
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Error saving attendance records:', error);
+      alert('Error saving attendance records. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const addNewDate = () => {
+    if (isSaving) return;
+
     const newRecord: AttendanceRecord = {
       date: format(new Date(), 'yyyy-MM-dd'),
       dutyTime: '',
@@ -109,6 +92,7 @@ export default function AttendanceView({ employee, attendance, onUpdate }: Atten
 
   const formatTime = (time: string) => {
     if (!time) return '';
+    // If time is in decimal format (e.g., 9.5), convert it to HH:mm
     if (!isNaN(Number(time))) {
       const hours = Math.floor(Number(time));
       const minutes = Math.round((Number(time) - hours) * 60);
@@ -149,22 +133,31 @@ export default function AttendanceView({ employee, attendance, onUpdate }: Atten
               <>
                 <button
                   onClick={handleSave}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                  disabled={isSaving}
+                  className={`px-4 py-2 bg-green-600 text-white rounded-lg ${
+                    isSaving ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-700'
+                  }`}
                 >
-                  Save Changes
+                  {isSaving ? 'Saving...' : 'Save Changes'}
                 </button>
                 <button
                   onClick={() => {
                     setEditedRecords([...attendance]);
                     setIsEditing(false);
                   }}
-                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+                  disabled={isSaving}
+                  className={`px-4 py-2 bg-gray-600 text-white rounded-lg ${
+                    isSaving ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-700'
+                  }`}
                 >
                   Cancel
                 </button>
                 <button
                   onClick={addNewDate}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  disabled={isSaving}
+                  className={`px-4 py-2 bg-blue-600 text-white rounded-lg ${
+                    isSaving ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'
+                  }`}
                 >
                   Add Date
                 </button>
@@ -195,7 +188,6 @@ export default function AttendanceView({ employee, attendance, onUpdate }: Atten
                 <th className="px-4 py-2">Medical</th>
                 <th className="px-4 py-2">Absent</th>
                 <th className="px-4 py-2">Remarks</th>
-                <th className="px-4 py-2">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -206,8 +198,17 @@ export default function AttendanceView({ employee, attendance, onUpdate }: Atten
                       <input
                         type="date"
                         value={record.date}
-                        onChange={(e) => handleEdit(index, 'date', e.target.value)}
+                        onChange={(e) => {
+                          const newDate = e.target.value;
+                          // Check if the new date already exists in other records
+                          if (editedRecords.some((r, i) => i !== index && r.date === newDate)) {
+                            alert('A record for this date already exists. Please choose a different date.');
+                            return;
+                          }
+                          handleEdit(index, 'date', newDate);
+                        }}
                         className="w-full border rounded px-2 py-1"
+                        disabled={isSaving}
                       />
                     ) : (
                       formatDate(record.date)
@@ -220,83 +221,18 @@ export default function AttendanceView({ employee, attendance, onUpdate }: Atten
                         value={record.dutyTime}
                         onChange={(e) => handleEdit(index, 'dutyTime', e.target.value)}
                         className="w-full border rounded px-2 py-1"
+                        disabled={isSaving}
                       />
                     ) : (
                       record.dutyTime
                     )}
                   </td>
-                  <td className="px-4 py-2">
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={record.inTime1}
-                        onChange={(e) => handleEdit(index, 'inTime1', e.target.value)}
-                        className="w-full border rounded px-2 py-1"
-                      />
-                    ) : (
-                      formatTime(record.inTime1)
-                    )}
-                  </td>
-                  <td className="px-4 py-2">
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={record.outTime1}
-                        onChange={(e) => handleEdit(index, 'outTime1', e.target.value)}
-                        className="w-full border rounded px-2 py-1"
-                      />
-                    ) : (
-                      formatTime(record.outTime1)
-                    )}
-                  </td>
-                  <td className="px-4 py-2">
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={record.inTime2}
-                        onChange={(e) => handleEdit(index, 'inTime2', e.target.value)}
-                        className="w-full border rounded px-2 py-1"
-                      />
-                    ) : (
-                      formatTime(record.inTime2)
-                    )}
-                  </td>
-                  <td className="px-4 py-2">
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={record.outTime2}
-                        onChange={(e) => handleEdit(index, 'outTime2', e.target.value)}
-                        className="w-full border rounded px-2 py-1"
-                      />
-                    ) : (
-                      formatTime(record.outTime2)
-                    )}
-                  </td>
-                  <td className="px-4 py-2">
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={record.inTime3}
-                        onChange={(e) => handleEdit(index, 'inTime3', e.target.value)}
-                        className="w-full border rounded px-2 py-1"
-                      />
-                    ) : (
-                      formatTime(record.inTime3)
-                    )}
-                  </td>
-                  <td className="px-4 py-2">
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={record.outTime3}
-                        onChange={(e) => handleEdit(index, 'outTime3', e.target.value)}
-                        className="w-full border rounded px-2 py-1"
-                      />
-                    ) : (
-                      formatTime(record.outTime3)
-                    )}
-                  </td>
+                  <td className="px-4 py-2">{formatTime(record.inTime1)}</td>
+                  <td className="px-4 py-2">{formatTime(record.outTime1)}</td>
+                  <td className="px-4 py-2">{formatTime(record.inTime2)}</td>
+                  <td className="px-4 py-2">{formatTime(record.outTime2)}</td>
+                  <td className="px-4 py-2">{formatTime(record.inTime3)}</td>
+                  <td className="px-4 py-2">{formatTime(record.outTime3)}</td>
                   <td className="px-4 py-2">
                     {isEditing ? (
                       <input
@@ -304,6 +240,7 @@ export default function AttendanceView({ employee, attendance, onUpdate }: Atten
                         checked={record.medical}
                         onChange={(e) => handleEdit(index, 'medical', e.target.checked)}
                         className="w-4 h-4"
+                        disabled={isSaving}
                       />
                     ) : (
                       record.medical ? '✓' : ''
@@ -316,6 +253,7 @@ export default function AttendanceView({ employee, attendance, onUpdate }: Atten
                         checked={record.absent}
                         onChange={(e) => handleEdit(index, 'absent', e.target.checked)}
                         className="w-4 h-4"
+                        disabled={isSaving}
                       />
                     ) : (
                       record.absent ? '✓' : ''
@@ -328,19 +266,11 @@ export default function AttendanceView({ employee, attendance, onUpdate }: Atten
                         value={record.remarks}
                         onChange={(e) => handleEdit(index, 'remarks', e.target.value)}
                         className="w-full border rounded px-2 py-1"
+                        disabled={isSaving}
                       />
                     ) : (
                       record.remarks
                     )}
-                  </td>
-                  <td className="px-4 py-2">
-                    <button
-                      onClick={() => handleDelete(index)}
-                      className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-100"
-                      title="Delete record"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
                   </td>
                 </tr>
               ))}

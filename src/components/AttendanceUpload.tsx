@@ -18,32 +18,28 @@ export default function AttendanceUpload({ onUpload, employees }: AttendanceUplo
     const reader = new FileReader();
     reader.onload = (event) => {
       const data = event.target?.result;
-      const workbook = XLSX.read(data, { type: 'binary' });
+      const workbook = XLSX.read(data, { type: 'binary', cellDates: true });
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
-      
-      // Get all rows from the worksheet
+
       const jsonData = XLSX.utils.sheet_to_json(worksheet, {
-        raw: false, // Convert all values to strings
-        defval: '', // Default value for empty cells
+        raw: false,
+        defval: '',
       });
-      
-      // Process the data to match employees
+
       const processedData = [];
-      
+
       for (const row of jsonData) {
-        // Find employee by matching both Staff ID and Name
-        const employee = employees.find(emp => 
-          emp.staffId === row['ID Number'] && 
+        const employee = employees.find(emp =>
+          emp.staffId === row['ID Number'] &&
           emp.name.toLowerCase() === row['Name']?.toLowerCase()
         );
 
         if (employee) {
-          // Process time values
+          // Convert time to HH:mm
           const processTime = (timeValue: string) => {
             if (!timeValue) return '';
             timeValue = timeValue.trim();
-            // If it's a number (decimal hours), convert to HH:mm
             if (!isNaN(Number(timeValue))) {
               const totalMinutes = Math.round(Number(timeValue) * 60);
               const hours = Math.floor(totalMinutes / 60);
@@ -53,35 +49,35 @@ export default function AttendanceUpload({ onUpload, employees }: AttendanceUplo
             return timeValue;
           };
 
-          // Process date
-          let dateValue = row['Date']?.toString() || '';
-          if (dateValue) {
-            try {
-              // If it's an Excel serial number
-              if (!isNaN(Number(dateValue))) {
-                const excelDate = XLSX.SSF.parse_date_code(Number(dateValue));
-                dateValue = `${excelDate.y}-${String(excelDate.m).padStart(2, '0')}-${String(excelDate.d).padStart(2, '0')}`;
-              } else {
-                // Try to parse as date string
-                const date = new Date(dateValue);
-                if (!isNaN(date.getTime())) {
-                  dateValue = date.toISOString().split('T')[0];
-                }
-              }
-            } catch (error) {
-              console.error('Error parsing date:', error);
+          // Process and adjust date
+          let dateValue = row['Date']?.toString().trim() || '';
+          try {
+            if (!isNaN(Number(dateValue))) {
+              // Excel numeric date
+              const excelDate = XLSX.SSF.parse_date_code(Number(dateValue));
+              const jsDate = new Date(excelDate.y, excelDate.m - 1, excelDate.d);
+              jsDate.setDate(jsDate.getDate() + 1); // Add 1 day
+              dateValue = jsDate.toISOString().split('T')[0];
+            } else if (typeof dateValue === 'string' && dateValue.includes('/')) {
+              // Date in string format: DD/MM/YYYY
+              const [day, month, year] = dateValue.split('/');
+              const jsDate = new Date(Number(year), Number(month) - 1, Number(day));
+              jsDate.setDate(jsDate.getDate() + 1); // Add 1 day
+              dateValue = jsDate.toISOString().split('T')[0];
             }
+          } catch (error) {
+            console.error('Error parsing date:', row['Date'], error);
           }
 
           processedData.push({
             employeeId: employee.id,
             date: dateValue,
-            inTime1: processTime(row['IN'] || ''),
-            outTime1: processTime(row['OUT'] || ''),
-            inTime2: processTime(row['IN.1'] || ''),
-            outTime2: processTime(row['OUT.1'] || ''),
-            inTime3: processTime(row['IN.2'] || ''),
-            outTime3: processTime(row['OUT.2'] || '')
+            inTime1: processTime(row['IN']),
+            outTime1: processTime(row['OUT']),
+            inTime2: processTime(row['IN.1']),
+            outTime2: processTime(row['OUT.1']),
+            inTime3: processTime(row['IN.2']),
+            outTime3: processTime(row['OUT.2']),
           });
         }
       }
@@ -91,13 +87,14 @@ export default function AttendanceUpload({ onUpload, employees }: AttendanceUplo
         return;
       }
 
+      console.table(processedData); // Debug output to verify dates
       onUpload(processedData);
-      
-      // Clear the file input
+
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
     };
+
     reader.readAsBinaryString(file);
   };
 

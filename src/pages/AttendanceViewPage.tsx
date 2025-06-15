@@ -9,6 +9,7 @@ export default function AttendanceViewPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
     fetchEmployees();
@@ -49,6 +50,7 @@ export default function AttendanceViewPage() {
 
       if (error) throw error;
 
+      // Map database records to frontend format
       const mappedRecords: AttendanceRecord[] = (data || []).map(record => ({
         date: record.date,
         dutyTime: record.duty_time || '',
@@ -76,26 +78,28 @@ export default function AttendanceViewPage() {
   };
 
   const handleAttendanceUpdate = async (updatedRecords: AttendanceRecord[]) => {
-    if (!selectedEmployee) return;
+    if (!selectedEmployee || isUpdating) return;
 
     try {
-      // Get all existing records for this employee to track their IDs
+      setIsUpdating(true);
+
+      // Sort records by date
+      const sortedRecords = [...updatedRecords].sort((a, b) => 
+        new Date(a.date).getTime() - new Date(b.date).getTime()
+      );
+
+      // Get existing records for this employee
       const { data: existingRecords, error: fetchError } = await supabase
         .from('attendance_records')
-        .select('*')
+        .select('date')
         .eq('employee_id', selectedEmployee.id);
 
       if (fetchError) throw fetchError;
 
-      // Create a map of existing records by date for easy lookup
-      const existingRecordMap = new Map(
-        existingRecords.map(record => [record.date, record])
-      );
+      const existingDates = new Set(existingRecords?.map(record => record.date));
 
-      // Process each updated record
-      for (const record of updatedRecords) {
-        const existingRecord = existingRecordMap.get(record.date);
-        
+      // Process records in sequence to avoid race conditions
+      for (const record of sortedRecords) {
         const recordData = {
           employee_id: selectedEmployee.id,
           date: record.date,
@@ -111,42 +115,23 @@ export default function AttendanceViewPage() {
           remarks: record.remarks
         };
 
-        if (existingRecord) {
-          // Update existing record
-          const { error } = await supabase
-            .from('attendance_records')
-            .update(recordData)
-            .eq('id', existingRecord.id);
-
-          if (error) throw error;
-        } else {
-          // This is a new record (from "Add Date" button)
-          const { error } = await supabase
-            .from('attendance_records')
-            .insert([recordData]);
-
-          if (error) throw error;
-        }
-      }
-
-      // Delete any records that were removed (if any)
-      const updatedDates = new Set(updatedRecords.map(r => r.date));
-      const recordsToDelete = existingRecords.filter(r => !updatedDates.has(r.date));
-
-      if (recordsToDelete.length > 0) {
         const { error } = await supabase
           .from('attendance_records')
-          .delete()
-          .in('id', recordsToDelete.map(r => r.id));
+          .upsert(recordData, {
+            onConflict: 'employee_id,date'
+          });
 
         if (error) throw error;
       }
 
-      // Refresh the attendance records
-      await fetchAttendance(selectedEmployee.id);
+      // Update the local state with the sorted records
+      setAttendanceRecords(sortedRecords);
     } catch (error) {
       console.error('Error updating attendance records:', error);
       alert('Error updating attendance records. Please try again.');
+      throw error; // Re-throw to trigger error handling in AttendanceView
+    } finally {
+      setIsUpdating(false);
     }
   };
 

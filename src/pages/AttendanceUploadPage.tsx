@@ -53,7 +53,7 @@ export default function AttendanceUploadPage() {
     const reader = new FileReader();
     reader.onload = async (event) => {
       const data = event.target?.result;
-      const workbook = XLSX.read(data, { type: 'binary' });
+      const workbook = XLSX.read(data, { type: 'binary', cellDates: true });
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
       
@@ -90,17 +90,20 @@ export default function AttendanceUploadPage() {
             return timeValue;
           };
 
-          let dateValue = row['Date']?.toString() || '';
+          let dateValue = row['Date']?.toString().trim() || '';
           if (dateValue) {
             try {
               if (!isNaN(Number(dateValue))) {
-                const excelDate = XLSX.SSF.parse_date_code(Number(dateValue));
-                dateValue = `${excelDate.y}-${String(excelDate.m).padStart(2, '0')}-${String(excelDate.d).padStart(2, '0')}`;
-              } else {
-                const date = new Date(dateValue);
-                if (!isNaN(date.getTime())) {
-                  dateValue = date.toISOString().split('T')[0];
-                }
+                // Excel stores dates as days since 1900-01-01
+                const excelDate = Number(dateValue);
+                const millisecondsPerDay = 24 * 60 * 60 * 1000;
+                const startDate = new Date('1900-01-01').getTime();
+                const dateObj = new Date(startDate + (excelDate - 1) * millisecondsPerDay);
+                dateValue = dateObj.toISOString().split('T')[0];
+              } else if (typeof dateValue === 'string' && dateValue.includes('/')) {
+                // Handle DD/MM/YYYY format
+                const [day, month, year] = dateValue.split('/').map(Number);
+                dateValue = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
               }
             } catch (error) {
               console.error('Error parsing date:', error);
