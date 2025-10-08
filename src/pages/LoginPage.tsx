@@ -126,8 +126,6 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           </button>
         </form>
 
-        // delete this 
-
         <div className="mt-6 text-center">
           <button
             onClick={() => {
