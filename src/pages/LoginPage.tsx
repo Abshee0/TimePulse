@@ -126,20 +126,6 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           </button>
         </form>
 
-        <div className="mt-6 text-center">
-          <button
-            onClick={() => {
-              setIsSignUp(!isSignUp);
-              setError('');
-              setPassword('');
-            }}
-            className="text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors"
-          >
-            {isSignUp
-              ? 'Already have an account? Sign in'
-              : "Don't have an account? Sign up"}
-          </button>
-        </div>
       </div>
     </div>
   );
