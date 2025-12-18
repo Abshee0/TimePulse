@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
-import { Users, FileSpreadsheet, Upload, BarChart, Calendar, Download, Settings, LogOut } from 'lucide-react';
+import { Users, FileSpreadsheet, Upload, BarChart, Calendar, Download, Settings, LogOut, PlaneTakeoff } from 'lucide-react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
@@ -10,6 +10,7 @@ import AttendanceUploadPage from './pages/AttendanceUploadPage';
 import AttendanceView from './pages/AttendanceViewPage';
 import DutyRosterPage from './pages/DutyRosterPage';
 import DownloadDutyRosterPage from './pages/DownloadDutyRosterPage';
+import LeaveManager from './pages/LeaveManager'
 import SettingsPage from './pages/SettingsPage';
 
 function Sidebar() {
@@ -23,6 +24,7 @@ function Sidebar() {
     { path: '/attendance-download', label: 'Download Attendance', icon: FileSpreadsheet },
     { path: '/duty-roster', label: 'Duty Roster', icon: Calendar },
     { path: '/download-duty-roster', label: 'Download Duty Roster', icon: Download },
+    { path: '/leave-manager', label: 'Leave Manager', icon: PlaneTakeoff },
     { path: '/settings', label: 'Settings', icon: Settings },
   ];
 
@@ -33,7 +35,7 @@ function Sidebar() {
   return (
     <aside className="w-64 bg-white shadow-lg min-h-screen flex flex-col">
       <div className="p-6 border-b border-gray-200">
-        <h2 className="text-xl font-bold text-gray-800">Staff Portal</h2>
+        <h2 className="text-xl font-bold text-gray-800">Attendance</h2>
         {user?.email && (
           <p className="text-xs text-gray-500 mt-1 truncate">{user.email}</p>
         )}
@@ -102,6 +104,7 @@ function AppContent() {
                   <Route path="/attendance-view" element={<AttendanceView />} />
                   <Route path="/duty-roster" element={<DutyRosterPage />} />
                   <Route path="/download-duty-roster" element={<DownloadDutyRosterPage />} />
+                  <Route path="/leave-manager" element={<LeaveManager />} />
                   <Route path="/settings" element={<SettingsPage />} />
                 </Routes>
               </main>
