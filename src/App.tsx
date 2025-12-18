@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
-import { Users, FileSpreadsheet, Upload, BarChart, Calendar, Download, Settings, LogOut, PlaneTakeoff } from 'lucide-react';
+import { Users, FileSpreadsheet, Upload, BarChart, Calendar, Download, Settings, LogOut, PlaneTakeoff, CalendarClock } from 'lucide-react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
@@ -11,6 +11,7 @@ import AttendanceView from './pages/AttendanceViewPage';
 import DutyRosterPage from './pages/DutyRosterPage';
 import DownloadDutyRosterPage from './pages/DownloadDutyRosterPage';
 import LeaveManager from './pages/LeaveManager'
+import CalendarView from './pages/CalendarView'
 import SettingsPage from './pages/SettingsPage';
 
 function Sidebar() {
@@ -22,9 +23,10 @@ function Sidebar() {
     { path: '/attendance-view', label: 'View Attendance', icon: BarChart },
     { path: '/attendance-upload', label: 'Upload Attendance', icon: Upload },
     { path: '/attendance-download', label: 'Download Attendance', icon: FileSpreadsheet },
-    { path: '/duty-roster', label: 'Duty Roster', icon: Calendar },
+    { path: '/duty-roster', label: 'Duty Roster', icon: CalendarClock },
     { path: '/download-duty-roster', label: 'Download Duty Roster', icon: Download },
     { path: '/leave-manager', label: 'Leave Manager', icon: PlaneTakeoff },
+    { path: '/calendar-view', label: 'Calendar View', icon: Calendar },
     { path: '/settings', label: 'Settings', icon: Settings },
   ];
 
@@ -105,6 +107,7 @@ function AppContent() {
                   <Route path="/duty-roster" element={<DutyRosterPage />} />
                   <Route path="/download-duty-roster" element={<DownloadDutyRosterPage />} />
                   <Route path="/leave-manager" element={<LeaveManager />} />
+                  <Route path="/calendar-view" element={<CalendarView />} />
                   <Route path="/settings" element={<SettingsPage />} />
                 </Routes>
               </main>
