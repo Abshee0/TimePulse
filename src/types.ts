@@ -26,3 +26,12 @@ export interface EmployeeAttendance {
   employeeId: string;
   records: AttendanceRecord[];
 }
+
+export interface roster_assignment {
+  id: string;
+  employee_id: string;
+  date: string;
+  shift_id: string;
+  shift_type_id: string;
+  
+}

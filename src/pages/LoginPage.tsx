@@ -54,7 +54,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           <div className="bg-blue-600 rounded-full p-3 mb-4">
             <LogIn className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-800">Attendance</h1>
+          <h1 className="text-3xl font-bold text-gray-800">TimePulse</h1>
           <p className="text-gray-600 mt-2">
             {isSignUp ? 'Create your account' : 'Sign in to continue'}
           </p>

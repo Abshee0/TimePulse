@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
-import { Users, FileSpreadsheet, Upload, BarChart, Calendar, Download, Settings, LogOut, PlaneTakeoff, CalendarClock } from 'lucide-react';
+import { Users, FileSpreadsheet, Upload, BarChart, Calendar, Download, Settings, LogOut, PlaneTakeoff, CalendarClock, CalendarDays } from 'lucide-react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
@@ -9,10 +9,12 @@ import AttendanceDownloadPage from './pages/AttendanceDownloadPage';
 import AttendanceUploadPage from './pages/AttendanceUploadPage';
 import AttendanceView from './pages/AttendanceViewPage';
 import DutyRosterPage from './pages/DutyRosterPage';
+import DutyRosterView from './pages/DutyRosterView'
 import DownloadDutyRosterPage from './pages/DownloadDutyRosterPage';
 import LeaveManager from './pages/LeaveManager'
 import CalendarView from './pages/CalendarView'
 import SettingsPage from './pages/SettingsPage';
+import RosterManagementPage from './pages/RosterManagementPage';
 
 function Sidebar() {
   const location = useLocation();
@@ -24,9 +26,10 @@ function Sidebar() {
     { path: '/attendance-upload', label: 'Upload Attendance', icon: Upload },
     { path: '/attendance-download', label: 'Download Attendance', icon: FileSpreadsheet },
     { path: '/duty-roster', label: 'Duty Roster', icon: CalendarClock },
+    { path: '/duty-roster-view', label: 'View Duty Roster', icon: CalendarDays },
     { path: '/download-duty-roster', label: 'Download Duty Roster', icon: Download },
     { path: '/leave-manager', label: 'Leave Manager', icon: PlaneTakeoff },
-    { path: '/calendar-view', label: 'Calendar View', icon: Calendar },
+    { path: '/calendar-view', label: 'Leave Calendar View', icon: Calendar },
     { path: '/settings', label: 'Settings', icon: Settings },
   ];
 
@@ -105,10 +108,12 @@ function AppContent() {
                   <Route path="/attendance-upload" element={<AttendanceUploadPage />} />
                   <Route path="/attendance-view" element={<AttendanceView />} />
                   <Route path="/duty-roster" element={<DutyRosterPage />} />
+                  <Route path="/duty-roster-view" element={<DutyRosterView />} />
                   <Route path="/download-duty-roster" element={<DownloadDutyRosterPage />} />
                   <Route path="/leave-manager" element={<LeaveManager />} />
                   <Route path="/calendar-view" element={<CalendarView />} />
                   <Route path="/settings" element={<SettingsPage />} />
+                  <Route path="/settings/roster-management" element={<RosterManagementPage />} />
                 </Routes>
               </main>
             </div>
