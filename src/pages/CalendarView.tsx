@@ -211,17 +211,17 @@ export default function CalendarView() {
                   >
                     <div className="font-semibold text-gray-800 mb-1">{day}</div>
                     <div className="space-y-1 flex-1 overflow-hidden">
-                      {leaves.slice(0, 2).map(leave => (
+                      {leaves.slice(0, 5).map(leave => (
                         <div
                           key={leave.id}
                           className={`px-1 py-0.5 rounded text-xs font-semibold truncate ${getLeaveColor(
                             leave.leave_type
                           )}`}
                         >
-                          {leave.leave_type[0]}
+                          {leave.employee_name}
                         </div>
                       ))}
-                      {leaves.length > 2 && (
+                      {leaves.length > 5 && (
                         <div className="px-1 py-0.5 text-xs text-gray-500">
                           +{leaves.length - 2} more
                         </div>

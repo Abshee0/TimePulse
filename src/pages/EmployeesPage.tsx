@@ -15,83 +15,91 @@ export default function EmployeesPage() {
   }, []);
 
   const fetchEmployees = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('employees')
-        .select('*')
-        .order('name');
+  try {
+    const { data, error } = await supabase
+      .from('employees')
+      .select('*')
+      .order('name');
 
-      if (error) throw error;
+    if (error) throw error;
 
-      setEmployees(data.map(emp => ({
+    setEmployees(
+      data.map(emp => ({
         id: emp.id,
         name: emp.name,
         staffId: emp.staff_id,
         position: emp.position,
         department: emp.department,
-        contactNumber: emp.contact_number
-      })));
-    } catch (error) {
-      console.error('Error fetching employees:', error);
-      alert('Error fetching employees. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+        contactNumber: emp.contact_number,
+        joinedDate: emp.joined_date,
+      }))
+    );
+  } catch (error) {
+    console.error('Error fetching employees:', error);
+    alert('Error fetching employees. Please try again.');
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const handleAddEmployee = async (employee: Omit<Employee, 'id'>) => {
-    try {
-      const { data, error } = await supabase
-        .from('employees')
-        .insert([{
-          name: employee.name,
-          staff_id: employee.staffId,
-          position: employee.position,
-          department: employee.department,
-          contact_number: employee.contactNumber
-        }])
-        .select()
-        .single();
+  try {
+    const { data, error } = await supabase
+      .from('employees')
+      .insert([{
+        name: employee.name,
+        staff_id: employee.staffId,
+        position: employee.position,
+        department: employee.department,
+        contact_number: employee.contactNumber,
+        joined_date: employee.joinedDate,
+      }])
+      .select()
+      .single();
 
-      if (error) throw error;
+    if (error) throw error;
 
-      setEmployees([...employees, {
-        id: data.id,
-        name: data.name,
-        staffId: data.staff_id,
-        position: data.position,
-        department: data.department,
-        contactNumber: data.contact_number
-      }]);
-    } catch (error) {
-      console.error('Error adding employee:', error);
-      alert('Error adding employee. Please try again.');
-    }
-  };
+    setEmployees([...employees, {
+      id: data.id,
+      name: data.name,
+      staffId: data.staff_id,
+      position: data.position,
+      department: data.department,
+      contactNumber: data.contact_number,
+      joinedDate: data.joined_date,
+    }]);
+  } catch (error) {
+    console.error('Error adding employee:', error);
+    alert('Error adding employee. Please try again.');
+  }
+};
+
 
   const handleEditEmployee = async (updatedEmployee: Employee) => {
-    try {
-      const { error } = await supabase
-        .from('employees')
-        .update({
-          name: updatedEmployee.name,
-          staff_id: updatedEmployee.staffId,
-          position: updatedEmployee.position,
-          department: updatedEmployee.department,
-          contact_number: updatedEmployee.contactNumber
-        })
-        .eq('id', updatedEmployee.id);
+  try {
+    const { error } = await supabase
+      .from('employees')
+      .update({
+        name: updatedEmployee.name,
+        staff_id: updatedEmployee.staffId,
+        position: updatedEmployee.position,
+        department: updatedEmployee.department,
+        contact_number: updatedEmployee.contactNumber,
+        joined_date: updatedEmployee.joinedDate,
+      })
+      .eq('id', updatedEmployee.id);
 
-      if (error) throw error;
+    if (error) throw error;
 
-      setEmployees(employees.map(emp =>
-        emp.id === updatedEmployee.id ? updatedEmployee : emp
-      ));
-    } catch (error) {
-      console.error('Error updating employee:', error);
-      alert('Error updating employee. Please try again.');
-    }
-  };
+    setEmployees(employees.map(emp =>
+      emp.id === updatedEmployee.id ? updatedEmployee : emp
+    ));
+  } catch (error) {
+    console.error('Error updating employee:', error);
+    alert('Error updating employee. Please try again.');
+  }
+};
+
 
   if (isLoading) {
     return (
@@ -127,6 +135,7 @@ export default function EmployeesPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Position</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined Date</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
@@ -138,6 +147,7 @@ export default function EmployeesPage() {
                   <td className="px-6 py-4 whitespace-nowrap">{employee.position}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{employee.department}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{employee.contactNumber}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{new Date(employee.joinedDate).toLocaleDateString()}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <button
                       onClick={() => {

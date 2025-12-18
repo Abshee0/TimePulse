@@ -5,6 +5,7 @@ export interface Employee {
   position: string;
   department: string;
   contactNumber: string;
+  joinedDate: string;
 }
 
 export interface AttendanceRecord {

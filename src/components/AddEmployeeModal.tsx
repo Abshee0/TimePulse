@@ -9,14 +9,24 @@ interface AddEmployeeModalProps {
   employee?: Employee | null;
 }
 
-export default function AddEmployeeModal({ isOpen, onClose, onSubmit, employee }: AddEmployeeModalProps) {
+const today = new Date().toISOString().split('T')[0];
+
+export default function AddEmployeeModal({
+  isOpen,
+  onClose,
+  onSubmit,
+  employee,
+}: AddEmployeeModalProps) {
   const [formData, setFormData] = useState({
     name: '',
     staffId: '',
     position: '',
     department: '',
     contactNumber: '',
+    joinedDate: today,
   });
+
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (employee) {
@@ -26,6 +36,7 @@ export default function AddEmployeeModal({ isOpen, onClose, onSubmit, employee }
         position: employee.position,
         department: employee.department,
         contactNumber: employee.contactNumber,
+        joinedDate: employee.joinedDate || today,
       });
     } else {
       setFormData({
@@ -34,29 +45,44 @@ export default function AddEmployeeModal({ isOpen, onClose, onSubmit, employee }
         position: '',
         department: '',
         contactNumber: '',
+        joinedDate: today,
       });
     }
+    setError(null);
   }, [employee]);
 
   if (!isOpen) return null;
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!formData.joinedDate) {
+      setError('Joined date is required.');
+      return;
+    }
+
+    if (formData.joinedDate > today) {
+      setError('Joined date cannot be in the future.');
+      return;
+    }
+
+    onSubmit(formData);
+  };
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">{employee ? 'Edit Employee' : 'Add Employee'}</h2>
+          <h2 className="text-xl font-bold">
+            {employee ? 'Edit Employee' : 'Add Employee'}
+          </h2>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
             <X className="w-6 h-6" />
           </button>
         </div>
 
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            onSubmit(formData);
-          }}
-          className="space-y-4"
-        >
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Name */}
           <div>
             <label className="block text-sm font-medium text-gray-700">Name</label>
             <input
@@ -68,6 +94,7 @@ export default function AddEmployeeModal({ isOpen, onClose, onSubmit, employee }
             />
           </div>
 
+          {/* Staff ID */}
           <div>
             <label className="block text-sm font-medium text-gray-700">Staff ID</label>
             <input
@@ -79,6 +106,7 @@ export default function AddEmployeeModal({ isOpen, onClose, onSubmit, employee }
             />
           </div>
 
+          {/* Position */}
           <div>
             <label className="block text-sm font-medium text-gray-700">Position</label>
             <input
@@ -90,6 +118,7 @@ export default function AddEmployeeModal({ isOpen, onClose, onSubmit, employee }
             />
           </div>
 
+          {/* Department */}
           <div>
             <label className="block text-sm font-medium text-gray-700">Department</label>
             <input
@@ -101,18 +130,45 @@ export default function AddEmployeeModal({ isOpen, onClose, onSubmit, employee }
             />
           </div>
 
+          {/* Contact Number */}
           <div>
             <label className="block text-sm font-medium text-gray-700">Contact Number</label>
             <input
               type="tel"
               value={formData.contactNumber}
-              onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, contactNumber: e.target.value })
+              }
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
               required
             />
           </div>
 
-          <div className="flex justify-end gap-2">
+          {/* Joined Date */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Joined Date
+            </label>
+            <input
+              type="date"
+              value={formData.joinedDate}
+              max={today}
+              onChange={(e) =>
+                setFormData({ ...formData, joinedDate: e.target.value })
+              }
+              className="mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              required
+            />
+          </div>
+
+          {/* Error message */}
+          {error && (
+            <p className="text-sm text-red-600 bg-red-50 p-2 rounded">
+              {error}
+            </p>
+          )}
+
+          <div className="flex justify-end gap-2 pt-2">
             <button
               type="button"
               onClick={onClose}
