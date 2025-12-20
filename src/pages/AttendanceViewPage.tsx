@@ -42,28 +42,48 @@ export default function AttendanceViewPage() {
 
   const fetchAttendance = async (employeeId: string) => {
     try {
-      const { data, error } = await supabase
+      const { data: attendanceData, error: attendanceError } = await supabase
         .from('attendance_records')
         .select('*')
         .eq('employee_id', employeeId)
         .order('date', { ascending: true });
 
-      if (error) throw error;
+      if (attendanceError) throw attendanceError;
 
-      // Map database records to frontend format
-      const mappedRecords: AttendanceRecord[] = (data || []).map(record => ({
-        date: record.date,
-        dutyTime: record.duty_time || '',
-        inTime1: record.in_time1 || '',
-        outTime1: record.out_time1 || '',
-        inTime2: record.in_time2 || '',
-        outTime2: record.out_time2 || '',
-        inTime3: record.in_time3 || '',
-        outTime3: record.out_time3 || '',
-        medical: record.medical || false,
-        absent: record.absent || false,
-        remarks: record.remarks || ''
-      }));
+      const { data: rosterData, error: rosterError } = await supabase
+        .from('roster_assignments')
+        .select(`
+          date,
+          shifts(start_time, grace_period)
+        `)
+        .eq('employee_id', employeeId);
+
+      if (rosterError) throw rosterError;
+
+      const rosterMap = new Map(
+        rosterData?.map((r: any) => [
+          r.date,
+          { startTime: r.shifts?.start_time, gracePeriod: r.shifts?.grace_period || 0 }
+        ]) || []
+      );
+
+      const mappedRecords: AttendanceRecord[] = (attendanceData || []).map(record => {
+        const rosterInfo = rosterMap.get(record.date);
+        return {
+          date: record.date,
+          dutyTime: rosterInfo?.startTime || '',
+          inTime1: record.in_time1 || '',
+          outTime1: record.out_time1 || '',
+          inTime2: record.in_time2 || '',
+          outTime2: record.out_time2 || '',
+          inTime3: record.in_time3 || '',
+          outTime3: record.out_time3 || '',
+          medical: record.medical || false,
+          absent: record.absent || false,
+          remarks: record.remarks || '',
+          gracePeriod: rosterInfo?.gracePeriod
+        };
+      });
 
       setAttendanceRecords(mappedRecords);
     } catch (error) {
@@ -103,7 +123,6 @@ export default function AttendanceViewPage() {
         const recordData = {
           employee_id: selectedEmployee.id,
           date: record.date,
-          duty_time: record.dutyTime,
           in_time1: record.inTime1,
           out_time1: record.outTime1,
           in_time2: record.inTime2,

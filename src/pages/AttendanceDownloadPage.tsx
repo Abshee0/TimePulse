@@ -29,6 +29,23 @@ export default function AttendanceDownloadPage() {
 
       if (attendanceError) throw attendanceError;
 
+      const { data: rosterData, error: rosterError } = await supabase
+        .from('roster_assignments')
+        .select(`
+          employee_id,
+          date,
+          shifts(start_time, grace_period)
+        `);
+
+      if (rosterError) throw rosterError;
+
+      const rosterMap = new Map(
+        rosterData?.map((r: any) => [
+          `${r.employee_id}-${r.date}`,
+          { startTime: r.shifts?.start_time, gracePeriod: r.shifts?.grace_period || 0 }
+        ]) || []
+      );
+
       const employeeMap = employees.map(emp => ({
         employee: {
           id: emp.id,
@@ -40,19 +57,23 @@ export default function AttendanceDownloadPage() {
         },
         attendance: attendanceRecords
           .filter(record => record.employee_id === emp.id)
-          .map(record => ({
-            date: record.date,
-            dutyTime: record.duty_time || '',
-            inTime1: record.in_time1 || '',
-            outTime1: record.out_time1 || '',
-            inTime2: record.in_time2 || '',
-            outTime2: record.out_time2 || '',
-            inTime3: record.in_time3 || '',
-            outTime3: record.out_time3 || '',
-            medical: record.medical,
-            absent: record.absent,
-            remarks: record.remarks || ''
-          }))
+          .map(record => {
+            const rosterInfo = rosterMap.get(`${emp.id}-${record.date}`);
+            return {
+              date: record.date,
+              dutyTime: rosterInfo?.startTime || '',
+              inTime1: record.in_time1 || '',
+              outTime1: record.out_time1 || '',
+              inTime2: record.in_time2 || '',
+              outTime2: record.out_time2 || '',
+              inTime3: record.in_time3 || '',
+              outTime3: record.out_time3 || '',
+              medical: record.medical,
+              absent: record.absent,
+              remarks: record.remarks || '',
+              gracePeriod: rosterInfo?.gracePeriod
+            };
+          })
       }));
 
       setEmployeesWithAttendance(employeeMap);

@@ -20,6 +20,7 @@ export interface AttendanceRecord {
   medical: boolean;
   absent: boolean;
   remarks: string;
+  gracePeriod?: number;
 }
 
 export interface EmployeeAttendance {
@@ -33,5 +34,14 @@ export interface roster_assignment {
   date: string;
   shift_id: string;
   shift_type_id: string;
-  
+}
+
+export interface Shift {
+  id: string;
+  name: string;
+  description: string;
+  start_time: string;
+  end_time: string;
+  color: string;
+  grace_period: number;
 }

@@ -122,6 +122,7 @@ export default function AttendanceUploadPage() {
             medical: false,
             absent: false,
             remarks: '',
+            gracePeriod: 0,
           };
 
           // Check if we already have this date for this employee
@@ -157,7 +158,6 @@ export default function AttendanceUploadPage() {
               .upsert({
                 employee_id: employeeData.employee.id,
                 date: record.date,
-                duty_time: record.dutyTime,
                 in_time1: record.inTime1,
                 out_time1: record.outTime1,
                 in_time2: record.inTime2,
@@ -202,7 +202,6 @@ export default function AttendanceUploadPage() {
           .upsert({
             employee_id: employeeId,
             date: record.date,
-            duty_time: record.dutyTime,
             in_time1: record.inTime1,
             out_time1: record.outTime1,
             in_time2: record.inTime2,

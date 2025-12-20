@@ -105,6 +105,7 @@ export default function AttendanceView({
         medical: false,
         absent: false,
         remarks: '',
+        gracePeriod: 0,
       }]
     );
   };
@@ -126,6 +127,25 @@ export default function AttendanceView({
       return format(parseISO(date), 'dd/MM/yyyy');
     } catch {
       return date;
+    }
+  };
+
+  const isLate = (record: AttendanceRecord): boolean => {
+    if (!record.inTime1 || !record.dutyTime || record.gracePeriod === undefined) {
+      return false;
+    }
+
+    try {
+      const [shiftHour, shiftMin] = record.dutyTime.split(':').map(Number);
+      const [inHour, inMin] = record.inTime1.split(':').map(Number);
+
+      const shiftMinutes = shiftHour * 60 + shiftMin;
+      const inMinutes = inHour * 60 + inMin;
+      const gracePeriodMinutes = record.gracePeriod || 0;
+
+      return inMinutes > shiftMinutes + gracePeriodMinutes;
+    } catch {
+      return false;
     }
   };
 
@@ -206,7 +226,10 @@ export default function AttendanceView({
             </thead>
             <tbody>
               {paginatedRecords.map((record, index) => (
-                <tr key={`${record.date}-${index}`} className="border-b">
+                <tr
+                  key={`${record.date}-${index}`}
+                  className={`border-b ${isLate(record) ? 'bg-pink-100' : ''}`}
+                >
                   <td className="px-4 py-2">
                     {isEditing ? (
                       <input
@@ -223,17 +246,7 @@ export default function AttendanceView({
                   </td>
 
                   <td className="px-4 py-2">
-                    {isEditing ? (
-                      <input
-                        value={record.dutyTime}
-                        onChange={e =>
-                          handleEdit(index, 'dutyTime', e.target.value)
-                        }
-                        className="border rounded px-2 py-1 text-center"
-                      />
-                    ) : (
-                      record.dutyTime
-                    )}
+                    {record.dutyTime}
                   </td>
 
                   <td className="px-4 py-2">{formatTime(record.inTime1)}</td>

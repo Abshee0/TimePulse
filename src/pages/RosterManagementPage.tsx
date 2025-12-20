@@ -2,15 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Clock } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-
-interface Shift {
-  id: string;
-  name: string;
-  description: string;
-  start_time: string;
-  end_time: string;
-  color: string;
-}
+import { Shift } from '../types';
 
 interface ShiftType {
   id: string;
@@ -46,6 +38,7 @@ export default function RosterManagementPage() {
     start_time: '',
     end_time: '',
     color: FIXED_COLORS[0].value,
+    grace_period: 0,
   });
 
   const [shiftTypeForm, setShiftTypeForm] = useState({
@@ -110,6 +103,7 @@ export default function RosterManagementPage() {
             start_time: shiftForm.start_time,
             end_time: shiftForm.end_time,
             color: shiftForm.color,
+            grace_period: shiftForm.grace_period,
             created_by: user?.id,
           },
         ])
@@ -125,6 +119,7 @@ export default function RosterManagementPage() {
         start_time: '',
         end_time: '',
         color: FIXED_COLORS[0].value,
+        grace_period: 0,
       });
     } catch (err: any) {
       console.error('Error adding shift:', err);
@@ -318,6 +313,22 @@ export default function RosterManagementPage() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Grace Period (minutes)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={shiftForm.grace_period}
+                        onChange={(e) =>
+                          setShiftForm({ ...shiftForm, grace_period: parseInt(e.target.value) || 0 })
+                        }
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Minutes after shift start time to consider as late</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
                         Color
                       </label>
                       <select
@@ -383,9 +394,14 @@ export default function RosterManagementPage() {
                             {shift.description}
                           </p>
                         )}
-                        <p className="text-sm font-medium text-gray-700">
+                        <p className="text-sm font-medium text-gray-700 mb-1">
                           {shift.start_time} - {shift.end_time}
                         </p>
+                        {shift.grace_period > 0 && (
+                          <p className="text-xs text-gray-600">
+                            Grace Period: {shift.grace_period} min
+                          </p>
+                        )}
                       </div>
                     ))}
                   </div>
