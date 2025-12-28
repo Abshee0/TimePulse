@@ -3,6 +3,7 @@ import { Upload } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Employee, AttendanceRecord } from '../types';
 import AttendanceView from '../components/AttendanceView';
+import templateFile from "../downloadfiles/attendanceuploadtemplate.xlsx";
 import { supabase } from '../lib/supabase';
 
 interface UploadedEmployee {
@@ -236,10 +237,26 @@ export default function AttendanceUploadPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold flex items-center gap-2">
+      <div className='flex justify-between items-center'>
+        <h1 className="text-2xl font-bold flex items-center gap-2">
         <Upload className="w-6 h-6" />
         Upload Attendance
       </h1>
+
+      <button
+      onClick={() => {
+              const link = document.createElement("a");
+              link.href = templateFile;
+              link.download = "attendanceuploadtemplate.xlsx";
+              link.click();
+            }}
+          className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition-colors"
+        >
+          <Upload className="w-4 h-4" />
+          Download Template
+        </button>
+      </div>
+      
 
       {!selectedEmployee ? (
         <>
